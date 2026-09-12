@@ -1,0 +1,28 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Node
+node_modules/
+
+# 生成物 / 临时文件
+dist/
+*.zip
+*.tmp
+
+# 密钥与本地配置（切勿提交）
+.env
+*.key
+*api_key*
+config.local.*
