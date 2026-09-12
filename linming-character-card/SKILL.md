@@ -7,8 +7,8 @@ description: |
   续写剧集分镜、给 TTS 配音参数。
   触发词：麟鸣、小鸣、鸣鸣、麟酱、Lin Ming、用麟鸣、麟鸣写一段、麟鸣的镜头、
   麟鸣世界书、麟鸣设定、麟鸣分镜、点灯的人、光环女儿、守望者、被需要的小神明。
-  不触发：用户只是要一张普通插画（走 media-generation），或要锻造一个全新角色卡
-  （走 character-card-forge）。
+  不触发：用户只是要一张普通插画（走 media-generation 或 minimax-media），
+  或要锻造一个全新角色卡（走 character-card-forge）。
 agent_created: true
 ---
 
@@ -74,6 +74,24 @@ agent_created: true
 4. **一次只改一个变量**（换场景就别同时换表情）
 5. 按 `references/comic-prompts.md` 第九节避坑清单逐条核对，**蓝灰色肩带排第一**
 
+**走 `minimax-media` 技能出图时**（已实测可用），把「参考图路线」这样落地：
+
+```bash
+PY="C:/Users/FengQ/.workbuddy/binaries/python/versions/3.13.12/python.exe"
+GEN="C:/Users/FengQ/.workbuddy/skills/minimax-media/scripts/minimax_image.py"
+
+# 第一步：出基准图（半身正面，交代全部外貌锚点），交给用户确认
+"$PY" "$GEN" --prompt "<comic-prompts.md A 节基准图提示词>" \
+  --aspect 3:4 --seed 20260912 --name "linming-base" --out "./out"
+
+# 第二步：基准图确认后，后续每张都拿它当人物主体参考，只改场景
+"$PY" "$GEN" --prompt "<目标场景与动作>" \
+  --ref "./out/linming-base.jpeg" --aspect 16:9 --out "./out"
+```
+
+> ⚠️ `subject_reference` **只接受 1 张参考图**，务必挑脸最正、最清晰的那张；
+> 参考图只负责「长相对」，服装与场景仍要靠 prompt 说清楚。
+
 ### C · 扩卡 / 世界书 / 剧集
 
 1. 改酒馆卡就基于 `assets/linming-sillytavern.json`，保持 `{{user}}` / `{{char}}` 占位
@@ -92,14 +110,19 @@ agent_created: true
 
 ## 诚实边界
 
-- **生图工具必须先查**，按三档依次查，**不要跳步、不要假设第 2 档一定存在**：
+- **生图工具必须先查**，按四档依次查，**不要跳步、不要假设某档一定存在**：
   1. `mcp__media__generate_image`（media MCP，见 `media-generation` 技能）—— 需连接器已接入
   2. 内置 `ImageGen` —— **必须先 `ToolSearch` 确认存在，不是每个会话都有**
-  3. 都没有 → 输出「可直接粘贴进豆包」的指令文本，**明确告诉用户图要他自己生**
-  > 📌 已实测存在「两档都没有」的环境（连接器只有 Agent Mail，`ImageGen` 搜不到）。
-  > 这种情况**不许假装能生图**，也**不许写脚本绕道调 API**。
+  3. **`minimax-media` 技能** —— 走 MiniMax 官方 API，**已实测可用**。
+     跨镜角色一致性就用它的 `--ref` 传主体参考图，命令与限制见该技能
+  4. 都没有 → 输出「可直接粘贴进豆包」的指令文本，**明确告诉用户图要他自己生**
+  > 📌 实测存在「前两档都没有」的环境（连接器只有 Agent Mail，`ImageGen` 搜不到），
+  > 这正是补上第 3 档 `minimax-media` 的原因。这种情况**不许假装能生图**。
   > 注：`VideoGen`（视频）有时反而是可用的，但它按秒计费，**用前必须先告知用户费用并取得同意**。
-- **跨镜一致性无法保证 100%**：文生图有随机性，参考图路线只是显著改善。
+- **要调 MiniMax 就用 `minimax-media` 技能里封装好的脚本**，不要手写 curl 或临时脚本拼请求。
+  那个脚本已处理凭据读取、参考图编码、错误码翻译、base64 落盘，手搓版本只会漏掉这些。
+- **跨镜一致性无法保证 100%**：文生图有随机性。用 `minimax-media` 的 `--ref`
+  主体参考可显著改善，但结果仍是「相近」而非「相同」。
 - **配色表是肉眼观察结论，未逐像素取色**，不给十六进制值；要精确色值请用取色器从原图采样。
 - 读图必须**真读**。没有本地路径就说看不见，不许编造色值与材质。
 - **模型可能根本不支持读图**：若 `Read` 返回 `does not support reading images`，
